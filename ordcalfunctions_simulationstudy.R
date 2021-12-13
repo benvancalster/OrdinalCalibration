@@ -165,7 +165,7 @@ mlrfunc<-function(datafit,dataval,ECI="none",levels=4,modelformula=y ~ x1 + x2 +
 }
 olrfunc<-function(datafit,dataval,ECI="none",levels=4,modelformula=y ~ x1 + x2 + x3){
   # Fit the model
-  olr <- vglm(modelformula, family=cumulative(parallel=T), data=datafit)
+  olr <- vglm(modelformula, family=cumulative(parallel=T, reverse=T), data=datafit)
   # Get predicted probabilities, the linear predictors, and the expected outcome E
   olrpred <- predictvglm(olr,newdata=dataval,type="response")
   olrlpred <- predictvglm(olr,newdata=dataval,type="link")
@@ -175,18 +175,18 @@ olrfunc<-function(datafit,dataval,ECI="none",levels=4,modelformula=y ~ x1 + x2 +
   olrcaldout = caldout(out=dataval$y,preds=olrpred,k=levels)
   # 'Architecture-specific' recalibration: predict outcome using linear predictor and the same architecture used the fit the model itself
   if (levels==4){
-    olrrecali <- coefficients(vglm(dataval$y ~ 1, offset = olrlpred[,1], family=cumulative(parallel=T)))[1]
-    olrrecals <- coefficients(vglm(dataval$y ~ olrlpred[,1], family=cumulative(parallel=T)))[c(4)]
-    olrrecali=c(olrrecali, coefficients(vglm(dataval$y ~ 1, offset = olrlpred[,2], family=cumulative(parallel=T)))[2])
-    olrrecals=c(olrrecals, coefficients(vglm(dataval$y ~ olrlpred[,2], family=cumulative(parallel=T)))[c(4)])
-    olrrecali=c(olrrecali, coefficients(vglm(dataval$y ~ 1, offset = olrlpred[,3], family=cumulative(parallel=T)))[3])
-    olrrecals=c(olrrecals, coefficients(vglm(dataval$y ~ olrlpred[,3], family=cumulative(parallel=T)))[c(4)])
+    olrrecali <- coefficients(vglm(dataval$y ~ 1, offset = olrlpred[,1], family=cumulative(parallel=T, reverse=T)))[1]
+    olrrecals <- coefficients(vglm(dataval$y ~ olrlpred[,1], family=cumulative(parallel=T, reverse=T)))[c(4)]
+    olrrecali=c(olrrecali, coefficients(vglm(dataval$y ~ 1, offset = olrlpred[,2], family=cumulative(parallel=T, reverse=T)))[2])
+    olrrecals=c(olrrecals, coefficients(vglm(dataval$y ~ olrlpred[,2], family=cumulative(parallel=T, reverse=T)))[c(4)])
+    olrrecali=c(olrrecali, coefficients(vglm(dataval$y ~ 1, offset = olrlpred[,3], family=cumulative(parallel=T, reverse=T)))[3])
+    olrrecals=c(olrrecals, coefficients(vglm(dataval$y ~ olrlpred[,3], family=cumulative(parallel=T, reverse=T)))[c(4)])
   }
   if (levels==3){
-    olrrecali <- coefficients(vglm(dataval$y ~ 1, offset = olrlpred[,1], family=cumulative(parallel=T)))[1]
-    olrrecals <- coefficients(vglm(dataval$y ~ olrlpred[,1], family=cumulative(parallel=T)))[c(3)]
-    olrrecali=c(olrrecali, coefficients(vglm(dataval$y ~ 1, offset = olrlpred[,2], family=cumulative(parallel=T)))[2])
-    olrrecals=c(olrrecals, coefficients(vglm(dataval$y ~ olrlpred[,2], family=cumulative(parallel=T)))[c(3)])
+    olrrecali <- coefficients(vglm(dataval$y ~ 1, offset = olrlpred[,1], family=cumulative(parallel=T, reverse=T)))[1]
+    olrrecals <- coefficients(vglm(dataval$y ~ olrlpred[,1], family=cumulative(parallel=T, reverse=T)))[c(3)]
+    olrrecali=c(olrrecali, coefficients(vglm(dataval$y ~ 1, offset = olrlpred[,2], family=cumulative(parallel=T, reverse=T)))[2])
+    olrrecals=c(olrrecals, coefficients(vglm(dataval$y ~ olrlpred[,2], family=cumulative(parallel=T, reverse=T)))[c(3)])
   }
   # Overall recalibration based on E
   olrcale = calE(out=dataval$y,preds=olrpred,k=levels)
@@ -717,7 +717,7 @@ comsave <- function(filep1){
     colnames(coeffs) <- c("ACNP","OLR","ACP","SMLR")
   }
   # coefficients; 3 levels, 4 predictors
-  if (nlevels(datapo[[1]]$y)==3){
+  if (nlevels(datapo[[1]]$y)==3 & length(acnpres[[2]]) == 10){
     coeffs=cbind(c(c(NA,NA),acnpres[[2]]),
                  c(c(NA,NA),olrres[[2]][1:2],olrres[[2]][c(3,3)],olrres[[2]][c(4,4)],olrres[[2]][c(5,5)],olrres[[2]][c(6,6)]),
                  c(c(NA,NA),acpres[[2]][1:2],acpres[[2]][c(3,3)],acpres[[2]][c(4,4)],acpres[[2]][c(5,5)],acpres[[2]][c(6,6)]),
@@ -725,6 +725,19 @@ comsave <- function(filep1){
     rownames(coeffs) <- c("Phi1","Phi2","Int1","Int2","b1_x1","b2_x1","b1_x2","b2_x2","b1_x3","b2_x3","b1_x4","b2_x4")
     colnames(coeffs) <- c("ACNP","OLR","ACP","SMLR")
   }
+  # coefficients; 3 levels, 4 predictors + 4 noise
+  if (nlevels(datapo[[1]]$y)==3 & length(acnpres[[2]]) == 18){
+     coeffs=cbind(c(c(NA,NA),acnpres[[2]]),
+                 c(c(NA,NA),olrres[[2]][1:2],olrres[[2]][c(3,3)],olrres[[2]][c(4,4)],olrres[[2]][c(5,5)],olrres[[2]][c(6,6)],
+                   olrres[[2]][c(7,7)],olrres[[2]][c(8,8)],olrres[[2]][c(9,9)],olrres[[2]][c(10,10)]),
+                  c(c(NA,NA),acpres[[2]][1:2],acpres[[2]][c(3,3)],acpres[[2]][c(4,4)],acpres[[2]][c(5,5)],acpres[[2]][c(6,6)],
+                    acpres[[2]][c(7,7)],acpres[[2]][c(8,8)],acpres[[2]][c(9,9)],acpres[[2]][c(10,10)]),
+                 c(smres[[2]][1:4],smres[[2]][c(5,5)],smres[[2]][c(6,6)],smres[[2]][c(7,7)],smres[[2]][c(8,8)],
+                   smres[[2]][c(9,9)],smres[[2]][c(10,10)],smres[[2]][c(11,11)],smres[[2]][c(12,12)]))
+     rownames(coeffs) <- c("Phi1","Phi2","Int1","Int2","b1_x1","b2_x1","b1_x2","b2_x2","b1_x3","b2_x3","b1_x4","b2_x4",
+                           "b1_x5","b2_x5","b1_x6","b2_x6","b1_x7","b2_x7","b1_x8","b2_x8")
+     colnames(coeffs) <- c("ACNP","OLR","ACP","SMLR")
+    }
   
   settings=datapo[[2]]
   
@@ -1275,4 +1288,170 @@ comsave_smalln <- function(filep3){
   }
   
   save(mlrsim,olrsim,acpsim,smsim,res,file=filep3)
+}
+
+# Compare flexible recalibration approaches
+flexrecalk4 <- function(filenm){
+  vgamsmps4azz = vgam(datapo[[1]]$y ~ sm.ps(log(acnpres[[3]][,2]/acnpres[[3]][,1]),df=4) + sm.ps(log(acnpres[[3]][,3]/acnpres[[3]][,1]),df=4) + sm.ps(log(acnpres[[3]][,4]/acnpres[[3]][,1]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4bzz = vgam(datapo[[1]]$y ~ sm.ps(log(olrres[[3]][,2]/olrres[[3]][,1]),df=4) + sm.ps(log(olrres[[3]][,3]/olrres[[3]][,1]),df=4) + sm.ps(log(olrres[[3]][,4]/olrres[[3]][,1]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4czz = vgam(datapo[[1]]$y ~ sm.ps(log(acpres[[3]][,2]/acpres[[3]][,1]),df=4) + sm.ps(log(acpres[[3]][,3]/acpres[[3]][,1]),df=4) + sm.ps(log(acpres[[3]][,4]/acpres[[3]][,1]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4dzz = vgam(datapo[[1]]$y ~ sm.ps(log(smres[[3]][,2]/smres[[3]][,1]),df=4) + sm.ps(log(smres[[3]][,3]/smres[[3]][,1]),df=4) + sm.ps(log(smres[[3]][,4]/smres[[3]][,1]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4axx = vgam(datapo[[1]]$y ~ sm.ps(log(acnpres[[3]][,1]/(acnpres[[3]][,2] + acnpres[[3]][,3] + acnpres[[3]][,4])),df=4) + 
+                        sm.ps(log((acnpres[[3]][,1] + acnpres[[3]][,2])/(acnpres[[3]][,3] + acnpres[[3]][,4])),df=4) + 
+                        sm.ps(log((acnpres[[3]][,1] + acnpres[[3]][,2] + acnpres[[3]][,3])/acnpres[[3]][,4]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4bxx = vgam(datapo[[1]]$y ~ sm.ps(log(olrres[[3]][,1]/(olrres[[3]][,2] + olrres[[3]][,3] + olrres[[3]][,4])),df=4) + 
+                        sm.ps(log((olrres[[3]][,1] + olrres[[3]][,2])/(olrres[[3]][,3] + olrres[[3]][,4])),df=4) + 
+                        sm.ps(log((olrres[[3]][,1] + olrres[[3]][,2] + olrres[[3]][,3])/olrres[[3]][,4]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4cxx = vgam(datapo[[1]]$y ~ sm.ps(log(acpres[[3]][,1]/(acpres[[3]][,2] + acpres[[3]][,3] + acpres[[3]][,4])),df=4) + 
+                        sm.ps(log((acpres[[3]][,1] + acpres[[3]][,2])/(acpres[[3]][,3] + acpres[[3]][,4])),df=4) + 
+                        sm.ps(log((acpres[[3]][,1] + acpres[[3]][,2] + acpres[[3]][,3])/acpres[[3]][,4]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4dxx = vgam(datapo[[1]]$y ~ sm.ps(log(smres[[3]][,1]/(smres[[3]][,2] + smres[[3]][,3] + smres[[3]][,4])),df=4) + 
+                        sm.ps(log((smres[[3]][,1] + smres[[3]][,2])/(smres[[3]][,3] + smres[[3]][,4])),df=4) + 
+                        sm.ps(log((smres[[3]][,1] + smres[[3]][,2] + smres[[3]][,3])/smres[[3]][,4]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4ayy = vgam(datapo[[1]]$y ~ sm.ps(log(acnpres[[3]][,1]/(1 - acnpres[[3]][,1])),df=4) + 
+                        sm.ps(log(acnpres[[3]][,2]/(1 - acnpres[[3]][,2])),df=4) + 
+                        sm.ps(log(acnpres[[3]][,3]/(1 - acnpres[[3]][,3])),df=4), family=multinomial(refLevel = 1))
+  vgamsmps4byy = vgam(datapo[[1]]$y ~ sm.ps(log(olrres[[3]][,1]/(1 - olrres[[3]][,1])),df=4) + 
+                        sm.ps(log(olrres[[3]][,2]/(1 - olrres[[3]][,2])),df=4) + 
+                        sm.ps(log(olrres[[3]][,3]/(1 - olrres[[3]][,3])),df=4), family=multinomial(refLevel = 1))
+  vgamsmps4cyy = vgam(datapo[[1]]$y ~ sm.ps(log(acpres[[3]][,1]/(1 - acpres[[3]][,1])),df=4) + 
+                        sm.ps(log(acpres[[3]][,2]/(1 - acpres[[3]][,2])),df=4) + 
+                        sm.ps(log(acpres[[3]][,3]/(1 - acpres[[3]][,3])),df=4), family=multinomial(refLevel = 1))
+  vgamsmps4dyy = vgam(datapo[[1]]$y ~ sm.ps(log(smres[[3]][,1]/(1 - smres[[3]][,1])),df=4) + 
+                        sm.ps(log(smres[[3]][,2]/(1 - smres[[3]][,2])),df=4) + 
+                        sm.ps(log(smres[[3]][,3]/(1 - smres[[3]][,3])),df=4), family=multinomial(refLevel = 1))
+  
+  vgamsmps4azzz = vgam(datapo[[1]]$y ~ sm.ps(log(acnpres[[3]][,2]/acnpres[[3]][,1]),df=4) + sm.ps(log(acnpres[[3]][,3]/acnpres[[3]][,1]),df=4) + sm.ps(log(acnpres[[3]][,4]/acnpres[[3]][,1]),df=4),family=cratio(parallel = F))
+  vgamsmps4bzzz = vgam(datapo[[1]]$y ~ sm.ps(log(olrres[[3]][,2]/olrres[[3]][,1]),df=4) + sm.ps(log(olrres[[3]][,3]/olrres[[3]][,1]),df=4) + sm.ps(log(olrres[[3]][,4]/olrres[[3]][,1]),df=4),family=cratio(parallel = F))
+  vgamsmps4czzz = vgam(datapo[[1]]$y ~ sm.ps(log(acpres[[3]][,2]/acpres[[3]][,1]),df=4) + sm.ps(log(acpres[[3]][,3]/acpres[[3]][,1]),df=4) + sm.ps(log(acpres[[3]][,4]/acpres[[3]][,1]),df=4),family=cratio(parallel = F))
+  vgamsmps4dzzz = vgam(datapo[[1]]$y ~ sm.ps(log(smres[[3]][,2]/smres[[3]][,1]),df=4) + sm.ps(log(smres[[3]][,3]/smres[[3]][,1]),df=4) + sm.ps(log(smres[[3]][,4]/smres[[3]][,1]),df=4),family=cratio(parallel = F))
+  vgamsmps4axxx = vgam(datapo[[1]]$y ~ sm.ps(log(acnpres[[3]][,1]/(acnpres[[3]][,2] + acnpres[[3]][,3] + acnpres[[3]][,4])),df=4) + 
+                         sm.ps(log((acnpres[[3]][,1] + acnpres[[3]][,2])/(acnpres[[3]][,3] + acnpres[[3]][,4])),df=4) + 
+                         sm.ps(log((acnpres[[3]][,1] + acnpres[[3]][,2] + acnpres[[3]][,3])/acnpres[[3]][,4]),df=4),family=cratio(parallel = F))
+  vgamsmps4bxxx = vgam(datapo[[1]]$y ~ sm.ps(log(olrres[[3]][,1]/(olrres[[3]][,2] + olrres[[3]][,3] + olrres[[3]][,4])),df=4) + 
+                         sm.ps(log((olrres[[3]][,1] + olrres[[3]][,2])/(olrres[[3]][,3] + olrres[[3]][,4])),df=4) + 
+                         sm.ps(log((olrres[[3]][,1] + olrres[[3]][,2] + olrres[[3]][,3])/olrres[[3]][,4]),df=4),family=cratio(parallel = F))
+  vgamsmps4cxxx = vgam(datapo[[1]]$y ~ sm.ps(log(acpres[[3]][,1]/(acpres[[3]][,2] + acpres[[3]][,3] + acpres[[3]][,4])),df=4) + 
+                         sm.ps(log((acpres[[3]][,1] + acpres[[3]][,2])/(acpres[[3]][,3] + acpres[[3]][,4])),df=4) + 
+                         sm.ps(log((acpres[[3]][,1] + acpres[[3]][,2] + acpres[[3]][,3])/acpres[[3]][,4]),df=4),family=cratio(parallel = F))
+  vgamsmps4dxxx = vgam(datapo[[1]]$y ~ sm.ps(log(smres[[3]][,1]/(smres[[3]][,2] + smres[[3]][,3] + smres[[3]][,4])),df=4) + 
+                         sm.ps(log((smres[[3]][,1] + smres[[3]][,2])/(smres[[3]][,3] + smres[[3]][,4])),df=4) + 
+                         sm.ps(log((smres[[3]][,1] + smres[[3]][,2] + smres[[3]][,3])/smres[[3]][,4]),df=4),family=cratio(parallel = F))
+  vgamsmps4ayyy = vgam(datapo[[1]]$y ~ sm.ps(log(acnpres[[3]][,1]/(1 - acnpres[[3]][,1])),df=4) + 
+                         sm.ps(log(acnpres[[3]][,2]/(1 - acnpres[[3]][,2])),df=4) + 
+                         sm.ps(log(acnpres[[3]][,3]/(1 - acnpres[[3]][,3])),df=4), family=cratio(parallel = F))
+  vgamsmps4byyy = vgam(datapo[[1]]$y ~ sm.ps(log(olrres[[3]][,1]/(1 - olrres[[3]][,1])),df=4) + 
+                         sm.ps(log(olrres[[3]][,2]/(1 - olrres[[3]][,2])),df=4) + 
+                         sm.ps(log(olrres[[3]][,3]/(1 - olrres[[3]][,3])),df=4), family=cratio(parallel = F))
+  vgamsmps4cyyy = vgam(datapo[[1]]$y ~ sm.ps(log(acpres[[3]][,1]/(1 - acpres[[3]][,1])),df=4) + 
+                         sm.ps(log(acpres[[3]][,2]/(1 - acpres[[3]][,2])),df=4) + 
+                         sm.ps(log(acpres[[3]][,3]/(1 - acpres[[3]][,3])),df=4), family=cratio(parallel = F))
+  vgamsmps4dyyy = vgam(datapo[[1]]$y ~ sm.ps(log(smres[[3]][,1]/(1 - smres[[3]][,1])),df=4) + 
+                         sm.ps(log(smres[[3]][,2]/(1 - smres[[3]][,2])),df=4) + 
+                         sm.ps(log(smres[[3]][,3]/(1 - smres[[3]][,3])),df=4), family=cratio(parallel = F))
+  
+  ecifrm = c(eci_rel(calout=vgamsmps4azz,preds=acnpres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4bzz,preds=olrres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4czz,preds=acpres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4dzz,preds=smres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4azzz,preds=acnpres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4bzzz,preds=olrres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4czzz,preds=acpres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4dzzz,preds=smres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4axx,preds=acnpres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4bxx,preds=olrres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4cxx,preds=acpres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4dxx,preds=smres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4axxx,preds=acnpres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4bxxx,preds=olrres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4cxxx,preds=acpres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4dxxx,preds=smres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4ayy,preds=acnpres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4byy,preds=olrres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4cyy,preds=acpres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4dyy,preds=smres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4ayyy,preds=acnpres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4byyy,preds=olrres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4cyyy,preds=acpres[[3]],k=4,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4dyyy,preds=smres[[3]],k=4,outc=datapo[[1]]$y))
+  
+  save(acnpres, olrres, acpres, smres, vgamsmps4azz, vgamsmps4bzz, vgamsmps4czz, vgamsmps4dzz, vgamsmps4azzz, vgamsmps4bzzz, vgamsmps4czzz, vgamsmps4dzzz,
+       vgamsmps4axx, vgamsmps4bxx, vgamsmps4cxx, vgamsmps4dxx, vgamsmps4axxx, vgamsmps4bxxx, vgamsmps4cxxx, vgamsmps4dxxx,
+       vgamsmps4ayy, vgamsmps4byy, vgamsmps4cyy, vgamsmps4dyy, vgamsmps4ayyy, vgamsmps4byyy, vgamsmps4cyyy, vgamsmps4dyyy,
+       ecifrm, file=filenm)
+  
+}
+flexrecalk3 <- function(filenm){
+  vgamsmps4azz = vgam(datapo[[1]]$y ~ sm.ps(log(acnpres[[3]][,2]/acnpres[[3]][,1]),df=4) + sm.ps(log(acnpres[[3]][,3]/acnpres[[3]][,1]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4bzz = vgam(datapo[[1]]$y ~ sm.ps(log(olrres[[3]][,2]/olrres[[3]][,1]),df=4) + sm.ps(log(olrres[[3]][,3]/olrres[[3]][,1]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4czz = vgam(datapo[[1]]$y ~ sm.ps(log(acpres[[3]][,2]/acpres[[3]][,1]),df=4) + sm.ps(log(acpres[[3]][,3]/acpres[[3]][,1]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4dzz = vgam(datapo[[1]]$y ~ sm.ps(log(smres[[3]][,2]/smres[[3]][,1]),df=4) + sm.ps(log(smres[[3]][,3]/smres[[3]][,1]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4axx = vgam(datapo[[1]]$y ~ sm.ps(log(acnpres[[3]][,1]/(acnpres[[3]][,2] + acnpres[[3]][,3])),df=4) + 
+                        sm.ps(log((acnpres[[3]][,1] + acnpres[[3]][,2])/acnpres[[3]][,3]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4bxx = vgam(datapo[[1]]$y ~ sm.ps(log(olrres[[3]][,1]/(olrres[[3]][,2] + olrres[[3]][,3])),df=4) + 
+                        sm.ps(log((olrres[[3]][,1] + olrres[[3]][,2])/olrres[[3]][,3]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4cxx = vgam(datapo[[1]]$y ~ sm.ps(log(acpres[[3]][,1]/(acpres[[3]][,2] + acpres[[3]][,3])),df=4) + 
+                        sm.ps(log((acpres[[3]][,1] + acpres[[3]][,2])/acpres[[3]][,3]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4dxx = vgam(datapo[[1]]$y ~ sm.ps(log(smres[[3]][,1]/(smres[[3]][,2] + smres[[3]][,3])),df=4) + 
+                        sm.ps(log((smres[[3]][,1] + smres[[3]][,2])/smres[[3]][,3]),df=4),family=multinomial(refLevel = 1))
+  vgamsmps4ayy = vgam(datapo[[1]]$y ~ sm.ps(log(acnpres[[3]][,1]/(1 - acnpres[[3]][,1])),df=4) + 
+                        sm.ps(log(acnpres[[3]][,2]/(1 - acnpres[[3]][,2])),df=4), family=multinomial(refLevel = 1))
+  vgamsmps4byy = vgam(datapo[[1]]$y ~ sm.ps(log(olrres[[3]][,1]/(1 - olrres[[3]][,1])),df=4) + 
+                        sm.ps(log(olrres[[3]][,2]/(1 - olrres[[3]][,2])),df=4), family=multinomial(refLevel = 1))
+  vgamsmps4cyy = vgam(datapo[[1]]$y ~ sm.ps(log(acpres[[3]][,1]/(1 - acpres[[3]][,1])),df=4) + 
+                        sm.ps(log(acpres[[3]][,2]/(1 - acpres[[3]][,2])),df=4), family=multinomial(refLevel = 1))
+  vgamsmps4dyy = vgam(datapo[[1]]$y ~ sm.ps(log(smres[[3]][,1]/(1 - smres[[3]][,1])),df=4) + 
+                        sm.ps(log(smres[[3]][,2]/(1 - smres[[3]][,2])),df=4), family=multinomial(refLevel = 1))
+  
+  vgamsmps4azzz = vgam(datapo[[1]]$y ~ sm.ps(log(acnpres[[3]][,2]/acnpres[[3]][,1]),df=4) + sm.ps(log(acnpres[[3]][,3]/acnpres[[3]][,1]),df=4),family=cratio(parallel = F))
+  vgamsmps4bzzz = vgam(datapo[[1]]$y ~ sm.ps(log(olrres[[3]][,2]/olrres[[3]][,1]),df=4) + sm.ps(log(olrres[[3]][,3]/olrres[[3]][,1]),df=4),family=cratio(parallel = F))
+  vgamsmps4czzz = vgam(datapo[[1]]$y ~ sm.ps(log(acpres[[3]][,2]/acpres[[3]][,1]),df=4) + sm.ps(log(acpres[[3]][,3]/acpres[[3]][,1]),df=4),family=cratio(parallel = F))
+  vgamsmps4dzzz = vgam(datapo[[1]]$y ~ sm.ps(log(smres[[3]][,2]/smres[[3]][,1]),df=4) + sm.ps(log(smres[[3]][,3]/smres[[3]][,1]),df=4),family=cratio(parallel = F))
+  vgamsmps4axxx = vgam(datapo[[1]]$y ~ sm.ps(log(acnpres[[3]][,1]/(acnpres[[3]][,2] + acnpres[[3]][,3])),df=4) + 
+                         sm.ps(log((acnpres[[3]][,1] + acnpres[[3]][,2])/acnpres[[3]][,3]),df=4),family=cratio(parallel = F))
+  vgamsmps4bxxx = vgam(datapo[[1]]$y ~ sm.ps(log(olrres[[3]][,1]/(olrres[[3]][,2] + olrres[[3]][,3])),df=4) + 
+                         sm.ps(log((olrres[[3]][,1] + olrres[[3]][,2])/olrres[[3]][,3]),df=4),family=cratio(parallel = F))
+  vgamsmps4cxxx = vgam(datapo[[1]]$y ~ sm.ps(log(acpres[[3]][,1]/(acpres[[3]][,2] + acpres[[3]][,3])),df=4) + 
+                         sm.ps(log((acpres[[3]][,1] + acpres[[3]][,2])/acpres[[3]][,3]),df=4),family=cratio(parallel = F))
+  vgamsmps4dxxx = vgam(datapo[[1]]$y ~ sm.ps(log(smres[[3]][,1]/(smres[[3]][,2] + smres[[3]][,3])),df=4) + 
+                         sm.ps(log((smres[[3]][,1] + smres[[3]][,2])/smres[[3]][,3]),df=4),family=cratio(parallel = F))
+  vgamsmps4ayyy = vgam(datapo[[1]]$y ~ sm.ps(log(acnpres[[3]][,1]/(1 - acnpres[[3]][,1])),df=4) + 
+                         sm.ps(log(acnpres[[3]][,2]/(1 - acnpres[[3]][,2])),df=4), family=cratio(parallel = F))
+  vgamsmps4byyy = vgam(datapo[[1]]$y ~ sm.ps(log(olrres[[3]][,1]/(1 - olrres[[3]][,1])),df=4) + 
+                         sm.ps(log(olrres[[3]][,2]/(1 - olrres[[3]][,2])),df=4), family=cratio(parallel = F))
+  vgamsmps4cyyy = vgam(datapo[[1]]$y ~ sm.ps(log(acpres[[3]][,1]/(1 - acpres[[3]][,1])),df=4) + 
+                         sm.ps(log(acpres[[3]][,2]/(1 - acpres[[3]][,2])),df=4), family=cratio(parallel = F))
+  vgamsmps4dyyy = vgam(datapo[[1]]$y ~ sm.ps(log(smres[[3]][,1]/(1 - smres[[3]][,1])),df=4) + 
+                         sm.ps(log(smres[[3]][,2]/(1 - smres[[3]][,2])),df=4), family=cratio(parallel = F))
+  
+  ecifrm = c(eci_rel(calout=vgamsmps4azz,preds=acnpres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4bzz,preds=olrres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4czz,preds=acpres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4dzz,preds=smres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4azzz,preds=acnpres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4bzzz,preds=olrres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4czzz,preds=acpres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4dzzz,preds=smres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4axx,preds=acnpres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4bxx,preds=olrres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4cxx,preds=acpres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4dxx,preds=smres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4axxx,preds=acnpres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4bxxx,preds=olrres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4cxxx,preds=acpres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4dxxx,preds=smres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4ayy,preds=acnpres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4byy,preds=olrres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4cyy,preds=acpres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4dyy,preds=smres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4ayyy,preds=acnpres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4byyy,preds=olrres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4cyyy,preds=acpres[[3]],k=3,outc=datapo[[1]]$y),
+             eci_rel(calout=vgamsmps4dyyy,preds=smres[[3]],k=3,outc=datapo[[1]]$y))
+  
+  save(acnpres, olrres, acpres, smres, vgamsmps4azz, vgamsmps4bzz, vgamsmps4czz, vgamsmps4dzz, vgamsmps4azzz, vgamsmps4bzzz, vgamsmps4czzz, vgamsmps4dzzz,
+       vgamsmps4axx, vgamsmps4bxx, vgamsmps4cxx, vgamsmps4dxx, vgamsmps4axxx, vgamsmps4bxxx, vgamsmps4cxxx, vgamsmps4dxxx,
+       vgamsmps4ayy, vgamsmps4byy, vgamsmps4cyy, vgamsmps4dyy, vgamsmps4ayyy, vgamsmps4byyy, vgamsmps4cyyy, vgamsmps4dyyy,
+       ecifrm, file=filenm)
+  
 }
